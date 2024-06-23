@@ -6,7 +6,8 @@ dotenv.config({
 
 const connectDB= async()=>{
     try {
-        await mongoose.connect(`${MONGO_URI}${DB_NAME}`)
+        // await mongoose.connect(`${MONGO_URI}/${DB_NAME}`)
+        await mongoose.connect("mongodb://localhost:27017/Hospitality")
         console.log("Server connected to Database successfully")
     } catch (error) {
         console.log("Failed to connexct to db")

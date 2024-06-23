@@ -1,102 +1,142 @@
-import {asyncHandler} from "../utils/asyncHandler.js"
-import {ApiError} from "../utils/ApiError.js"
-import {ApiResponse} from "../utils/ApiResponse.js"
-import {Group} from "../models/group.js"
-import {Hostel} from "../models/hostel.js"
-import csv from "csv-parser"
-import path from "path"
-import fs from "fs"
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import Group from "../models/group.js";
+import Hostel from "../models/hostel.js";
+import csv from "csv-parser";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from 'url';
 
-const uploadCSV= asyncHandler(async(req,res)=>{
+const uploadCSV = asyncHandler(async (req, res) => {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
     const UPLOAD_DIR = path.join(__dirname, '../uploads');
 
-        if (!req.files) {
-            return res.status(400).json (400,ApiResponse(400,'No files were uploaded'));
-        }
-    
-        // Process files and allocate rooms
-        processFiles(res);
-    
-    function processFiles(res){
-        let groups = [];
-        let hostels = [];
-    
-        // Read groups CSV
-try {
-            fs.createReadStream(path.join(UPLOAD_DIR, 'groups.csv'))
-                .pipe(csv())
-                .on('data', row => {
-                    groups.push(new Group(row.GroupID, row.Members, row.Gender));
-                })
-                .on('end', () => {
-                    // Read hostels CSV
-                    fs.createReadStream(path.join(UPLOAD_DIR, 'hostels.csv'))
-                        .pipe(csv())
-                        .on('data', row => {
-                            hostels.push(new Hostel(row.HostelName, row.RoomNumber, row.Capacity, row.Gender));
-                        })
-                        .on('end', () => {
-                            // Process allocation
-                            let allocations = allocateRooms(groups, hostels);
-                            // Render result view with allocations
-                            res.render('result', { allocations });
-                        });
-                });
-} catch (error) {
-    throw new ApiError(400, "Failed to read files")
-}
+    if (!req.files || !req.files.groupCSV || !req.files.hostelCSV) {
+        return res.status(400).json(new ApiResponse(400, 'Both the files are required'));
     }
-    function allocateRooms(groups, hostels) {
-        // Sort groups and hostels
-try {
-            groups.sort((a, b) => b.members - a.members);
-            hostels.sort((a, b) => b.capacity - a.capacity);
-        
-            let allocations = [];
-        
-            function allocateGroup(members, gender, groupId) {
-                let allocated = false;
-                for (let hostel of hostels) {
-                    if (hostel.gender === gender && hostel.capacity >= members) {
-                        allocations.push({
-                            GroupID: groupId,
-                            HostelName: hostel.hostelName,
-                            RoomNumber: hostel.roomNumber,
-                            MembersAllocated: members
-                        });
-                        hostel.capacity -= members;
-                        allocated = true;
-                        break;
-                    }
+
+    const groupsFilePath = path.join(UPLOAD_DIR, req.files.groupCSV[0].filename);
+    const hostelsFilePath = path.join(UPLOAD_DIR, req.files.hostelCSV[0].filename);
+
+    try {
+        const groups = await parseCSV(groupsFilePath, Group);
+        const hostels = await parseCSV(hostelsFilePath, Hostel);
+
+        const allocations = allocateRooms(groups, hostels);
+        res.render('result', { allocations });
+    } catch (error) {
+        res.status(500).json(new ApiResponse(500, 'Error processing CSV files'));
+    }
+});
+
+function parseCSV(filePath, Model) {
+    return new Promise((resolve, reject) => {
+        const results = [];
+        fs.createReadStream(filePath)
+            .pipe(csv())
+            .on('data', (row) => {
+                if (Model === Group) {
+                    results.push(new Group(row.GroupID, parseInt(row.Members), row.Gender));
+                } else if (Model === Hostel) {
+                    results.push(new Hostel(row.HostelName, row.RoomNumber, parseInt(row.Capacity), row.Gender));
                 }
-                if (!allocated) {
-                    // Handle cases where a group cannot be accommodated
+            })
+            .on('end', () => {
+                resolve(results);
+            })
+            .on('error', (error) => {
+                reject(error);
+            });
+    });
+}
+
+function allocateRooms(groups, hostels) {
+    try {
+        let boysGroups = [];
+        let girlsGroups = [];
+
+        // Separate the groups into boys and girls
+        for (let group of groups) {
+            if (group.gender.includes('&')) {
+                let [boysCount, girlsCount] = group.gender.split(' & ').map(g => parseInt(g.split(' ')[0]));
+                boysGroups.push({ groupID: group.groupID, members: boysCount, gender: 'Boys' });
+                girlsGroups.push({ groupID: group.groupID, members: girlsCount, gender: 'Girls' });
+            } else if (group.gender === 'Boys') {
+                boysGroups.push(group);
+            } else if (group.gender === 'Girls') {
+                girlsGroups.push(group);
+            }
+        }
+
+        // Sort boys and girls groups by the number of members in descending order
+        boysGroups.sort((a, b) => b.members - a.members);
+        girlsGroups.sort((a, b) => b.members - a.members);
+
+        // Sort hostels by capacity in descending order
+        hostels.sort((a, b) => b.capacity - a.capacity);
+
+        let allocations = [];
+
+        function allocateGroup(members, gender, groupId) {
+            let allocated = false;
+
+            for (let hostel of hostels) {
+                if (hostel.gender === gender && hostel.capacity >= members) {
                     allocations.push({
                         GroupID: groupId,
-                        HostelName: 'Not Allocated',
-                        RoomNumber: 'N/A',
+                        HostelName: hostel.hostelName,
+                        RoomNumber: hostel.roomNumber,
                         MembersAllocated: members
                     });
+                    hostel.capacity -= members;
+                    allocated = true;
+                    break;
                 }
             }
-        
-            for (let group of groups) {
-                if (group.gender.includes('&')) {
-                    let [boysCount, girlsCount] = group.gender.split(' & ').map(g => parseInt(g.split(' ')[0]));
-                    allocateGroup(boysCount, 'Boys', group.groupID);
-                    allocateGroup(girlsCount, 'Girls', group.groupID);
-                } else {
-                    allocateGroup(group.members, group.gender, group.groupID);
-                }
-            }
-        
-            return allocations;
-} catch (error) {
-    throw new ApiError(400, "Failed to allocate rooms")
-}
-    }
-})
 
-export{
-    uploadCSV
+            if (!allocated) {
+                allocations.push({
+                    GroupID: groupId,
+                    HostelName: 'Not Allocated',
+                    RoomNumber: 'N/A',
+                    MembersAllocated: members
+                });
+            }
+        }
+
+        // Allocate boys groups
+        for (let group of boysGroups) {
+            allocateGroup(group.members, group.gender, group.groupID);
+        }
+
+        // Allocate girls groups
+        for (let group of girlsGroups) {
+            allocateGroup(group.members, group.gender, group.groupID);
+        }
+
+        return allocations;
+    } catch (error) {
+        throw new ApiError(400, "Failed to allocate rooms");
+    }
 }
+ 
+
+
+let groups = [
+    { groupID: 1, members: 5, gender: 'Boys' },
+    { groupID: 2, members: 4, gender: 'Girls' },
+    { groupID: 3, members: 6, gender: '3 Boys & 3 Girls' }
+];
+
+let hostels = [
+    { hostelName: 'Hostel A', roomNumber: 101, capacity: 4, gender: 'Boys' },
+    { hostelName: 'Hostel B', roomNumber: 102, capacity: 6, gender: 'Girls' },
+    { hostelName: 'Hostel C', roomNumber: 103, capacity: 5, gender: 'Boys' },
+    { hostelName: 'Hostel D', roomNumber: 104, capacity: 7, gender: 'Girls' }
+];
+
+console.log(allocateRooms(groups, hostels));
+export { uploadCSV };
