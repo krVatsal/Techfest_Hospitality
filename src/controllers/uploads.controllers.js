@@ -123,20 +123,4 @@ function allocateRooms(groups, hostels) {
     }
 }
  
-
-
-let groups = [
-    { groupID: 1, members: 5, gender: 'Boys' },
-    { groupID: 2, members: 4, gender: 'Girls' },
-    { groupID: 3, members: 6, gender: '3 Boys & 3 Girls' }
-];
-
-let hostels = [
-    { hostelName: 'Hostel A', roomNumber: 101, capacity: 4, gender: 'Boys' },
-    { hostelName: 'Hostel B', roomNumber: 102, capacity: 6, gender: 'Girls' },
-    { hostelName: 'Hostel C', roomNumber: 103, capacity: 5, gender: 'Boys' },
-    { hostelName: 'Hostel D', roomNumber: 104, capacity: 7, gender: 'Girls' }
-];
-
-console.log(allocateRooms(groups, hostels));
 export { uploadCSV };
