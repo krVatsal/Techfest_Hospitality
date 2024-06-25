@@ -4,7 +4,7 @@ import {upload} from "../middlewares/multer.middleware.js"
 
 const router =Router()
 router.route("/upload").post(
-    upload.fields([
+    upload.any([
         {
             name: "groupCSV",
             maxCount: "1"

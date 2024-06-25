@@ -8,20 +8,34 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from 'url';
 import { resultModel } from "../models/result.js";
-import mongoose from "mongoose";
+
 
 const uploadCSV = asyncHandler(async (req, res) => {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
 
     const UPLOAD_DIR = path.join(__dirname, '../uploads');
+// console.log(req.files.hostelCSV)
+if (!req.files || req.files.length !== 2) {
+    return res.status(400).json({ message: 'Both files are required' });
+  }
 
-    if (!req.files || !req.files.groupCSV || !req.files.hostelCSV) {
-        return res.status(400).json(new ApiResponse(400, 'Both the files are required'));
+  let groupCSV, hostelCSV;
+
+  req.files.forEach(file => {
+    if (file.fieldname === 'groupCSV') {
+      groupCSV = file;
+    } else if (file.fieldname === 'hostelCSV') {
+      hostelCSV = file;
     }
+  });
 
-    const groupsFilePath = path.join(UPLOAD_DIR, req.files.groupCSV[0].filename);
-    const hostelsFilePath = path.join(UPLOAD_DIR, req.files.hostelCSV[0].filename);
+  if (!groupCSV || !hostelCSV) {
+    return res.status(400).json({ message: 'Both files are required' });
+  }
+
+    const groupsFilePath = path.join(UPLOAD_DIR, groupCSV.filename);
+    const hostelsFilePath = path.join(UPLOAD_DIR, hostelCSV.filename);
 
     try {
         const groups = await parseCSV(groupsFilePath, Group);
