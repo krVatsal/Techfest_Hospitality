@@ -51,22 +51,27 @@ export default function Home() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        resetForm();
-        setLoading(false); // Stop loading after download
-      } else {
-        setDisplayText("Download failed. Please try again.");
+        setDisplayText("Hostel allocated and \n Allocation file downloaded successfully");
         setLoading(false); // Stop loading on error
         setTimeout(() => {
           setDisplayText(""); // Clear the display text after 2 seconds
         }, 2000);
+        resetForm();
+        setLoading(false); // Stop loading after download
+      } else {
+        // setDisplayText("Download failed. Please try again.");
+        // setLoading(false); // Stop loading on error
+        // setTimeout(() => {
+        //   setDisplayText(""); // Clear the display text after 2 seconds
+        // }, 2000);
       }
     } catch (error) {
       console.error('Download error:', error);
-      setDisplayText("Download failed. Please try again.");
-      setLoading(false); // Stop loading on error
-      setTimeout(() => {
-        setDisplayText(""); // Clear the display text after 2 seconds
-      }, 2000);
+      // setDisplayText("Download failed. Please try again.");
+      // setLoading(false); // Stop loading on error
+      // setTimeout(() => {
+      //   setDisplayText(""); // Clear the display text after 2 seconds
+      // }, 2000);
     }
   };
 
