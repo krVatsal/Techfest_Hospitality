@@ -40,7 +40,7 @@ if (!req.files || req.files.length !== 2) {
     try {
         const groups = await parseCSV(groupsFilePath, Group);
         const hostels = await parseCSV(hostelsFilePath, Hostel);
-
+console.log(groups,hostels)
 
         const allocations = allocateRooms(groups, hostels);
      

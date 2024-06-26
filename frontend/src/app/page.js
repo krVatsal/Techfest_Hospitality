@@ -13,23 +13,23 @@ export default function Home() {
     setFile1(e.target.files[0]);
     setFileName1(e.target.files[0].name);
      // Set the name of the first file
-     console.log(e.target.files[0])
+
   };
  
   const handleFile2Change = (e) => {
     setFile2(e.target.files[0]);
     setFileName2(e.target.files[0].name); // Set the name of the second file
-    console.log(e.target.files)
+
   };
 
-  const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result.split(',')[1]); // Get the base64 part
-      reader.onerror = (error) => reject(error);
-    });
-  };
+  // const fileToBase64 = (file) => {
+  //   return new Promise((resolve, reject) => {
+  //     const reader = new FileReader();
+  //     reader.readAsDataURL(file);
+  //     reader.onload = () => resolve(reader.result.split(',')[1]); // Get the base64 part
+  //     reader.onerror = (error) => reject(error);
+  //   });
+  // };
 
   const downloadFile = async () => {
     try {
@@ -51,6 +51,7 @@ export default function Home() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+        resetForm();
         setLoading(false); // Stop loading after download
       } else {
         setDisplayText("Download failed. Please try again.");
@@ -78,48 +79,47 @@ export default function Home() {
       return;
     }
 
-  //   const formData = new FormData();
-  //   formData.append('groupCSV', file1); // Append first file with its name
-  //   formData.append('hostelCSV', file2); // Append second file with its name
-  //   for (var pair of formData.entries()) {
-  //     console.log(pair[0]+ ', ' + pair[1]); 
-  // }
-  //  var options = { content: formData };
-  //  console.log(options)
-
-  const groupCSV= file1
-  const hostelCSV=file2
-  const options={
-    groupCSV, hostelCSV
+    const formData = new FormData();
+    formData.append('groupCSV', file1); // Append first file with its name
+    formData.append('hostelCSV', file2); // Append second file with its name
+    for (var pair of formData.entries()) {
+      console.log(pair[0]+ ', ' + pair[1]); 
   }
+   var options = { content: formData };
+
+  // const groupCSV= file1
+  // const hostelCSV=file2
+  // const options={
+  //   groupCSV, hostelCSV
+  // }
 
     try {
       setLoading(true); // Start loading animation
 
-      const base64File1 = await fileToBase64(file1);
-      const base64File2 = await fileToBase64(file2);
+      // const base64File1 = await fileToBase64(file1);
+      // const base64File2 = await fileToBase64(file2);
 
-      const payload = {
-        groupCSV: base64File1,
-        hostelCSV: base64File2
-      };
-
-      let r = await fetch("http://localhost:8000/api/v1/upload", {
-        method: "POST",
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
+      // const payload = {
+      //   groupCSV: base64File1,
+      //   hostelCSV: base64File2
+      // };
 
       // let r = await fetch("http://localhost:8000/api/v1/upload", {
       //   method: "POST",
-      //   body: options
+      //   headers: {
+      //     'Accept': 'application/json',
+      //     'Content-Type': 'application/json'
+      //   },
+      //   body: JSON.stringify(payload)
       // });
 
-      let res = await r.text();
-      console.log(options, res);
+      let r = await fetch("http://localhost:8000/api/v1/upload", {
+        method: "POST",
+        body: formData
+      });
+
+      // let res = await r.text();
+      // console.log(options, res);
 
       if (r.ok) {
         setDisplayText("Uploaded successfully! Starting download...");
@@ -148,15 +148,15 @@ export default function Home() {
 
   return (
     <div>
-      <h1 className="text-white font-bold text-5xl text-center pt-20">Techfest-Hospitality</h1>
-      <p className="text-gray-300 text-center pt-2">Where Advocacy Meets Need: Connecting You with the Right Legal Expertise</p>
+      <h1 className="text-white font-bold text-5xl text-center pt-20">ACCOMODATION</h1>
+      <p className="text-gray-300 text-center pt-2">Books Your Home Away from Home for Techfest Adventures</p>
 
       <h2 className="text-white font-bold text-3xl text-center pt-20">Upload your CSV files here</h2>
 
       <div className="text-center pt-5">
         <h3 className="text-white font-bold text-xl pt-5">Upload Group CSV file</h3>
         <input 
-          className="mt-2 ml-52" 
+          className="mt-2 ml-60" 
           type="file" 
           name='groupCSV'
           onChange={handleFile1Change} 
@@ -167,7 +167,7 @@ export default function Home() {
       <div className="text-center pt-10">
         <h3 className="text-white font-bold text-xl pt-5">Upload Hostel CSV file</h3>
         <input 
-          className="mt-2 ml-52" 
+          className="mt-2 ml-60" 
           type="file" 
           name='hostelCSV'
           onChange={handleFile2Change} 
@@ -180,7 +180,7 @@ export default function Home() {
           className="mt-2 text-white bg-blue-500 px-4 py-2 rounded" 
           onClick={onSubmit}
         >
-          Submit Both CSVs
+          Submit Both CSVs and Download
         </button>
       </div>
 
